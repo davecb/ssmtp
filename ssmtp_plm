@@ -1,0 +1,286 @@
+
+
+The PLM (Program Logic Manual) for sSMTP.
+
+David Collier-Brown
+
+
+
+
+
+
+Introduction.
+    sSMTP is one half of a set of minimum-functionality mail programs for
+workstations which use a departmental server as their mailhub.  The other
+is/was rSMTP, but most people use pop.
+
+    sSMTP sends mail for the users of the workstation.  Period.  Full stop.
+It doesn't forward mail, it doesn't do mailing lists, it just sends mail.
+And if it can't it refuses with an explanation, thereby sending the mail
+scurrying back to the sender.
+
+   If you don't have a departmental or other main mailhub that you pick your
+mail up from, sSMTP may not be a lot of use to you. ``Pick up'' can mean
+NFS-mounting the servers disk, running pop or imap or using rSMTP.
+
+History.
+   When I started this, I was writing a standalone mail receiver for
+people who didn't want to use Sendmail at all.  
+
+  This is applicable to a wide range of machine types:
+
+	1) stations which have peculiar sendmails that end
+		up taking too much time to build variant .cf files for,
+	2) stations which are anonymous mail clients of non-sun servers 
+		(Sun has a ``concentrate mail handling on the server''
+		option in its sendmail.)
+	3) Suns which don't run Yellow Snow but have stock shared
+		libraries (and therefor can't communicate to anyone not
+		in their hosts files)
+	4) stations whose vendors don't read host requirements RFCs
+		and so don't provide DNS service
+	5) stations who are getting a bit long in the tooth and
+		never did have DNS
+	6) stations whose owners don't care to administer mail, but
+		want the service to be reliable
+	7) stations who have ``mysterious problems'' with mail
+	8) stations in a department (or lab) where the mail is
+		supposed to be to/from the domain, not individual machines.
+
+
+    There are some limitations: this program doesn't honor ``sendmail -t'',
+so one of the two gnu mail readers won't work with it, nor will some
+other mail user agents (mailtool, if memory serves).
+
+    Believe it or not, this is nothing but a filter.  You do have to specify
+some parameters, but it basically reads stdin and writes to some other
+MTA's stdin in turn.
+    The mail receiver is also a filter, run from indetd and using /bin/mail
+-d for final delivery.  It seems to be mostly of historical interest, but
+can be obtained by harassing the author by email.
+
+ 
+Organization.
+  The paper has the same structure as the program, starting with main()
+and working its way down.
+  A structure chart looks like this: 
+
+
+                              +------+
+                              | main |
+                              +------+
+                                  |
+                                  +------------+
+                                  |            |
+                              +-------+   +-----------+
+                              | sSMTP |   | doOptions |
+                              +-------+   +-----------+
+                                  |       | getConfig |
+                                  |       +-----------+
+                                  |
+         +-------------+----------+-----+--------------+
+         |             |                |              |
+   +----------+  +------------+   +-------------+  +-----------------------+
+   | getpwuid |  | openSocket |   | putToSmtp   |  | addInitialHeaders     |
+   +----------+  +------------+   +-------------+  +-----------------------+
+                                  | getFromSmtp |  | recordRequiredHeaders |
+                                  +-------------+  +-----------------------+
+                                                   | addRequiredHeaders    |
+                                                   +-----------------------+
+
+  The simplicity of the structure is deliberate: smtp is simple, but
+not simple-minded.  The isomorphisms help make verification easier.
+
+File sSMTP.c
+
+
+  MailHub is the machine that provides the pop service. It can be
+an A-record or a CNAME, but not a lonely MX.
+  I once considered supporting MX records, but it really dosen't add much:
+the program would have to iterate trying connctions at some cost in
+complexity just to be able to try for a fallback to a heavily supported
+departmental service.  I decided to go for simplicity, and discovered that
+it pays off: the error report is unambiguous, the reaction is immediate, and
+as a result, whenever one of the mailhubs is down, the users call us up on
+the phone and tell us exactly what has hapenned.  Sort of like SNMP using
+volunteers instead of programs.
+
+ We usually name mailhubs ``<department>.yorku.ca'', so that people can use
+finger to see if mail has been delivered/read. 
+
+  If you don't have DNS, you do have to have your mailhub name defined in 
+your /etc/hosts file or YP (now NIS) maps.  
+
+  REWRITE_DOMAIN is the domain that sSMTP will use in ``From:'' lines.  If
+it is defined, sSMTP will do hostname-hiding.  The system-defined hostname,
+with any domain it includes, will be used otherwise. 
+  We use FQDNs as hostnames.  If you don't, you can set HostName in the /usr/local/etc/mail.conf
+file, along with the mailhub, person to receive root's mail and the rewrite domain.
+
+function main()
+	This function does little save set signals, assign globals, 
+parse arguments and pass non-options to ssmtp.
+
+function doOptions()
+	This makes the program look like /usr/lib/sendmail, by
+interpreting the command-line options and doing one of three
+things with them:
+
+
+* Ignore them.  They have no particular importance in context.
+* Emulate them, so that this program can be treated just like
+	sendmail by both humans and other programs.  For example,
+	the ``mailq'' command is emulated by saying there is nothing 
+	in queue.
+* Explain them. If an explanation is given, the program is unable
+	to emulate the command and is about to exit with a non-zero
+	return code.  For example, /usr/lib/sendmail -bd (run in daemon mode)
+	is diagnosed as impossible, the program explains its inability,
+	then exits.  This tends to catch or at least flag misuses.
+
+
+function getConfig()
+    This function reads the domain name, the person who gets ``root'' mail
+and any other site-specific options from a configuration file.  
+
+function sSMTP()
+
+  This is the protocol machine.  All the policy lives here, as do the
+response messages.  This makes arguing about the fidelity of the
+implementation much easier, just like a recursive descent compiler.
+  This is important: this program has to interwork with some fragile
+software out there, not all of which was written at Berkeley.
+
+  There are two error conditions which the program can not deal with:
+impossibilities and fatal errors.  Both cause the program to exit with
+a message and a non-zero return code.
+  The impossible conditions are things like no host name for
+the machine or no known user name for the uid running the program.
+Merely fatal errors are an inability to open a socket to the
+smtp port. That one means the mailhub is down and nothing can be done
+about it locally.
+
+  Whenever the program exits, the calling program should arrange to
+do something sane, such as saving messages to dead.letter. Alas, few
+if any do: several just delete the mail silently.  Therefor ssmtp
+will write is input to HOME/dead.letter if it encounters an impossibility
+or a fatal error.  
+
+
++[The unnamed step.] 
+	sSMTP must connect to the mailhub, or fail as above.
++[The HELO step.]
+	sSMTP sends a HELO, then listens for a 2XX return code.
+	
+	It elects to fail if smtp server refuses to accept our hostname.
+	Normally this can't happen (according to the RFC) so this is 
+	treated as an ``impossible condition''.  We agree, and handle it 
+	the same way as other impossible: we stop processing, explain and
+	exit with a non-zero code.  This is what we'd do if it were a 
+	well-defined fatal error condition, mind you...
+
++[The MAIL From step] 
+	sSMTP does a ``from'' with the hostname and userid of the sender.
+	It fails properly if smtp says no or wait.
+
++[The RCPT To step]
+	sSMTP does one or more ``to''s, and fails unless all are accepted. 
+	Mailhubs are required to accept all: if they don't, we're in deep
+	trouble and its better to tell the end user than deliver some 
+	messages and fail to deliver others.
+	Both sendmail and zmailer accept all to addresses, so we're fairly
+	safe with ``normal'' atomic actions. Don't try using may rSMTP on
+	a mailhub, though: it's one of the few programs that will refuse
+	individual adresses.
+
++[The DATA step]
+	sSMTP send data until eof on input.  This theoretically could
+	cause a doubled ``.'' to appear at the end of the message if the
+	users of ``/usr/lib/sendmail'' insert lonely dots themselves.  That
+	has happened with some public-domain mail user agents. 	Harmless, but 
+	unexpected.  And wrong.
+
+	This is where the normal failure occurs: the server can't
+	take the message for some good reason, says ``no way'', and
+	sSMTP exits with a failure indication and tries to save the
+	message to dead.letter.  Neither sendmail nor zmailer
+	try to reject individual addresses before the DATA step, so
+	this is where we see the aborts.
+
++[The QUIT step] does a clean exit from the protocol machine.
+	Ironically, this could fail. We ignore this possibility,
+	as it appears lack a meaning, and reporting it as an error
+	to the call could result bogus failures being reported to
+	a human.
+
+
+
+	sSMTP logs results on sucessfull completion, or for any
+exit via ``die''.
+
+  Finally, a timeout results in a lost connection message (for half-open
+connections) and a log message, followed by an exit with a failure
+indication and the usual save to dead.letter...
+
+Supporting libraries.
+I/O library
+	This library makes smtp sockets look like Unix-domain fd's.
+Special thanks to Blair P. Houghton, who developed a socket opening
+function I've adapted.
+	The rest of the library is a trio of get functions: one
+to deal with boolean-like results, its server which deals with
+possibly multi-line responses, and a final server which makes 
+reading from an network socket look like fgets on a stream.
+	Plus a put function, for obvious purposes.
+
+Alarm library
+	An alarmHandler causes an exit to ``die'' on timeouts,
+via a traditional but non-portable and ill-definde longjmp.
+
+Die and Flush functions
+	These functions try to deal with fatal and impossible
+errors, by producing as meanaingfull a diagnostic as possible
+and as useful a dump to dead.letter as can be managed.  Alas,
+errors in error-exit routines themselves may not be as well handled
+as others elsewhere: running out of disk space here is a problem.
+
+Logging
+	Logging is done effectively but inelegantly, via a cloud
+of #ifdefs to log files, syslog and stderr.
+
+Configuration file library
+	These few functions read and interpret the configuration file,
+/usr/local/etc/mail.conf (or /etc/mail.conf), by setting
+the globals Root, MailHub, HostName and RewriteDomain from the contents
+of the file.
+
+Rewriting/Standardization library
+	This small library looks after making sure that required
+headers are generated, if the user agent fails.  Others are 
+left up to the mailhub, as it's the ``canonical'' source of the
+message.
+	The one and only rewriting function lives here, too:
+it rewrites entire from lines iff REWRITE_DOMAIN is defined.
+I almost got away without it, but I can't guarantee I'd have
+good mailhubs.  Some of the things I get stuck with I can't
+really recommend (and I don't!)
+
+File Strings.c
+  This file is some string utilities, including ones known
+to be absent on machines I've tested.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+..EOF

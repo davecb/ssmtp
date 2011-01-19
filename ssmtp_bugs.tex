@@ -1,0 +1,53 @@
+\documentstyle{article}  
+\title{The Bugs in sSMTP.}
+\author{David Collier-Brown}
+\date{\today}
+\begin{document}
+\maketitle
+
+\section{Introduction.}
+  This is a history of the criticisms of and bugs found in sSMTP,
+primarily by the anonymous reviewers of comp.sources.reviewed.
+
+\section{Criticisms}
+\begin{itemize}
+\item README and man page were insufficient -- rewritten.
+\item Bad MANIFEST format -- changed to use Larry Wall's {\it makekit(1)}
+\item BSD sockets weren't documented as a dependency -- documented now.
+\item Patchlevel wrong in documentation
+\item strings.h and other BSD-isms in code -- corrected.
+\item Fails to honor ``-f user'' and ``-fuser'' -- UNCHANGED.  
+	This feature isn't really guaranteed, and I elected to not
+	support it.
+\item Does not guarantee addition of required headers, assuming
+	mailhub will apply them -- changed, alas.  I assumed the
+	sendmail/zmailer behavior of adding RFC-required fields,
+	but this assumption didn't hold water: I wasn't sending
+	and RFC-compliant message, and PP spotted it.  So now
+	I do.
+\item Does not support -t -- documented better.  This is a
+	fundamental (mis) feature of the program, which is a filter.
+	Adding -t requires at least a tempfile and possibly a
+	queue, which makes the program radically different.  I've
+	been asked (by Mike Marques) to write the more complex program,
+	and may do so at a later date.  It certainly won't be called
+	sSMTP, though! (The s stands for both small and simple).
+\item Installation replaces /usr/lib/sendmail without saving a copy -- corrected.
+\item ROOT= set in Makefile -- corrected.
+\item LACKING= ill-documented -- corrected.
+\item Latex errors in ssmtp\_plm.tex -- corrected.
+\item Man page doesn't document sendmail flags -- corrected.
+\item Won't compile on Sys V before R4 (Sys V R 3.2 frogs badly on the 
+	BSD-specific  signals TTIN/TTOU).
+\item Contained ``\verb+^L+'' characters, generate bad shar file -- corrected.
+\item Too hard to reconfigure after compilation (also spotted
+	my Mike Marques) -- added mail.conf file.
+\item If you don't give it a to-address, it doesn't send a MAIL FROM:$<>$
+	(found by me, in testing) -- corrected.
+\item I had a printf(fp,buffer) in the code, which had problems
+	printing lines containing %'s (found by Pok Ng) -- corrected.
+\item I had a missing fp in a printf (found by me) -- corrected.
+
+\end{itemize}
+
+\end{document}

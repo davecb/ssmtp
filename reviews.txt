@@ -1,0 +1,112 @@
+Reviews:
+	14 source requests 1 full review, 1 partial
+
+Summary of Reviews
+
+In summary i found the tool to be well packaged and very portable.
+HPUX is as unique as other *nix's and this compiled and built
+pretty much out of the box.  The man page was missing, a detail
+in this dist'n for review.
+
+Conceptually the idea is timely and of use in many situations.
+Sharing resources in a workgroup is not a strong point for Unix.
+ssmtp provides a nice bit of simplification for the touchy issue
+of mail addressing and handling in this situation.
+
+`Post it with notes about HPUX.'
+
+Systems [UNIX, with sockets]:
+	HPUX 8.0
+	SunOS 4.1.3
+
+	[needs sockets -- so does sendmail, BTW.]
+
+Format of the Submission			[!!]
+	Shar file.  Unpacks in the current directory.
+
+	Missing the man page?
+
+General:
+
+The README is mercifully short and concise.  It also points to the larger
+_plm doc for complete design info.  The _plm file is a very good idea and i
+will be copying the format for my own stuff!
+
+Building the Software
+
+The only issue I have here is that "tcov" is not described.  I get the
+impression that anyone on a SUN will know what it is right away, but us
+"furriners" from HP-land get lost about here.  I think a note in the INSTALL
+and in the makefile is called for.  You might also want to change the "tcov"
+item in the Makefile to "test" as a more generic title.
+
+Of course the `tcov' version of the tool did not build correctly.
+
+NO for install - HP's std install command stalled and died on the install
+step.  I would recommend at least a note telling HPUX users to run the
+make install as root and to change install to "cp".
+
+
+Testing the Software
+
+[Did the software run on each of the systems you tested?]
+
+well no, but it is not ssmtp's fault.  We may not have the mailhubs
+sendmail configured in a std way.  I am one of the sysops here and I
+will be following up on this.  when sending to the hub I get:
+> /usr/lib/sendmail nobody <test.mail
+/usr/lib/sendmail: can't open the smtp port (25) on nbrwh83.bnr.ca.
+... so something is wrong.
+
+[Did the program perform the functions it was supposed to perform?]
+
+The test_ssmtp shows that the code runs safely, all options it does not
+handle are warned about.  It does not wreck any thing.  
+And I will get the hub to listen and I am sure that it will work.
+
+I am not going to bother with diff's, too few changes:
+	For HPUX 8.0
+
+Makefile:LACKING= -DNOSTRNCASECMP
+Makefile:ROOT=
+Makefile:TFLAGS= ${BASEFLAGS}  #removed the -a
+Makefile:        install -s -m 755 ssmtp ${DESTDIR}/sendmail
+	to:	 cp ssmtp ${DESTDIR}/sendmail
+
+ssmtp.c:        /* commented out for HPUX, the decl here clashes with the
+		one in string_ext.c
+		char    *strncasecmp();
+		*/
+
+Plus add to INSTALL:
+
+"For installation on an HPUX cluster it is safest to make /usr/lib/sendfile
+ a CDF so that only your node changes over to ssmtp.  If the sysops want to
+ make it the general tool for the whole cluster they can make it so.
+
+ Make the cdf by "makecdf -c default sendfile" in /usr/lib.
+ Copy ssmtp to /usr/lib
+ Add ssmtp to the cdf with "makecdf -c <yournode> -f ssmtp sendfile"
+"
+
+that is it for installing on an HPUX cluster.
+None of this applies to HPUX stand-alone nodes.
+
+The Documentation
+
+	Cool.
+
+
+Functionality and Features
+
+[Does the software perform some function that is valuable?]
+
+YES, we have problems in out HP cluster setup with sendmail on the
+cluster nodes having a hardtime with the sendmail on the cluster
+server.  I am hoping this little guy will sidestep the whole
+issue, once I get it talking to the mail socket on the hub!
+
+[Are there obvious features or additions that would improve the package?]
+
+NOTHING - it is a clean, Unix-like little tool that does a small
+job in a special situation.  Don't mess that up.

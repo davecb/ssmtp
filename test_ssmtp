@@ -1,0 +1,59 @@
+
+#!/bin/sh
+#
+# test_ssmtp -- run a set of basic coverage-analysis tests
+#	for use with the sun ``tcov'' analyzer.  Make sure
+#	you've compiled with -a on a sun first.  Used by
+#	``make tconv''
+#
+rm -f ssmtp.tcov
+./ssmtp nobody <test.mail
+ln -s ./ssmtp ./mailq; ./mailq; rm ./mailq
+ln -s ./ssmtp ./newalias; ./newalias; rm ./newalias
+./ssmtp -ba nobody </dev/null 
+./ssmtp -bd nobody </dev/null # Dies. 
+./ssmtp -bi nobody </dev/null 
+./ssmtp -bm nobody </dev/null 
+./ssmtp -bp nobody </dev/null # Dies. 
+./ssmtp -bs nobody </dev/null # Dies. 
+./ssmtp -bt nobody </dev/null # Dies. 
+./ssmtp -bv nobody </dev/null # Dies. 
+./ssmtp -bz nobody </dev/null # Dies. 
+./ssmtp -C nobody </dev/null 
+./ssmtp -d nobody </dev/null 
+./ssmtp -E nobody </dev/null 
+./ssmtp -F nobody </dev/null
+./ssmtp -f nobody </dev/null
+./ssmtp -h nobody </dev/null
+./ssmtp -M nobody </dev/null
+./ssmtp -m nobody </dev/null
+./ssmtp -n nobody </dev/null
+./ssmtp -oA nobody </dev/null
+./ssmtp -oc nobody </dev/null
+./ssmtp -oD nobody </dev/null
+./ssmtp -od nobody </dev/null
+./ssmtp -oe nobody </dev/null
+./ssmtp -oF nobody </dev/null
+./ssmtp -of nobody </dev/null
+./ssmtp -og nobody </dev/null
+./ssmtp -oH nobody </dev/null
+./ssmtp -oi nobody </dev/null
+./ssmtp -oL nobody </dev/null
+./ssmtp -om nobody </dev/null
+./ssmtp -oo nobody </dev/null # Dies. 
+./ssmtp -oQ nobody </dev/null
+./ssmtp -or nobody </dev/null
+./ssmtp -os nobody </dev/null
+./ssmtp -oS nobody </dev/null
+./ssmtp -oT nobody </dev/null
+./ssmtp -ot nobody </dev/null
+./ssmtp -ou nobody </dev/null
+./ssmtp -ov nobody </dev/null
+./ssmtp -q nobody </dev/null # Dies. 
+./ssmtp -R nobody </dev/null
+./ssmtp -r nobody </dev/null
+./ssmtp -t nobody </dev/null
+./ssmtp -v nobody </dev/null
+./ssmtp -V nobody </dev/null # Dies. 
+tcov ssmtp.c
+grep '##' ssmtp.tcov

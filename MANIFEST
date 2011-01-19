@@ -1,0 +1,17 @@
+   File Name		Archive #	Description
+-----------------------------------------------------------
+ INSTALL                    1	installation instructions
+ MANIFEST                   1	this file
+ Makefile                   1	Makefile
+ README                     1	basic information
+ mail.conf                  1	an optional config file
+ patchlevel.h               1	the version
+ ssmtp.c                    2	the source
+ ssmtp.h                    1	a few constants
+ ssmtp_bugs.tex             1	a short history of errors
+ ssmtp_plm                  1	program logic manual
+ ssmtp_plm.tex              1	and its source
+ string_ext.c               1	some usefull functions
+ string_ext.h               1	and their headers
+ test.mail                  1	a test message
+ test_ssmtp                 1	a script for running tcov
